@@ -137,6 +137,34 @@ The following examples use PowerShell and assume the API is running at `http://l
 Invoke-RestMethod -Uri "http://localhost:3000/tasks" -Method Get
 ```
 
+### Filter Tasks by Completion Status
+
+The `GET /tasks` endpoint supports an optional `completed` query parameter.
+
+Retrieve only completed tasks:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/tasks?completed=true" -Method Get
+```
+
+Retrieve only incomplete tasks:
+
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/tasks?completed=false" -Method Get
+```
+
+Omitting the `completed` parameter returns all tasks.
+
+The parameter accepts only `true` or `false`. Any other value returns HTTP `400 Bad Request`:
+
+```json
+{
+  "error": "Completed must be true or false"
+}
+```
+
+If no tasks match the filter, the API returns HTTP `200 OK` with an empty array (`[]`).
+
 ### Get a Specific Task
 
 ```powershell
