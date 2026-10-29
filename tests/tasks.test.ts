@@ -17,6 +17,8 @@ afterAll(() => {
     testDb.close();
 });
 
+// GET
+
 describe("GET /tasks", () => {
     it("should return a list of tasks", async () => {
 
@@ -66,7 +68,81 @@ describe("GET /tasks", () => {
             error: "Task not found"
         });
     });
+
+    it("should return only completed tasks when completed=true", async () => {
+    // Insert two tasks with different completion statuses
+    testDb.prepare(
+        "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+    ).run("Completed task", 1);
+
+    testDb.prepare(
+        "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+    ).run("Incomplete task", 0);
+
+    // Request only completed tasks
+    const response = await request(app)
+        .get("/tasks?completed=true");
+
+    // Verify the response
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0].title).toBe("Completed task");
+    expect(response.body[0].completed).toBe(true);
+    });
+
+    it("should return only completed tasks when completed=false", async () => {
+    // Insert two tasks with different completion statuses
+    testDb.prepare(
+        "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+    ).run("Completed task", 1);
+
+    testDb.prepare(
+        "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+    ).run("Incomplete task", 0);
+
+    // Request only incomplete tasks
+    const response = await request(app)
+        .get("/tasks?completed=false");
+
+    // Verify the response
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveLength(1);
+    expect(response.body[0].title).toBe("Incomplete task");
+    expect(response.body[0].completed).toBe(false);
+    });
+
+    it("should return 400 for an invalid completed filter", async () => {
+    // Send a request with an invalid query parameter
+    const response = await request(app)
+        .get("/tasks?completed=hello");
+
+    // Verify the HTTP status code
+    expect(response.status).toBe(400);
+
+    // Verify the error message
+    expect(response.body).toEqual({
+        error: "Completed must be true or false"
+    });
+    });
+
+    it("should return an empty array when no tasks match the filter", async () => {
+    // Insert only an incomplete task
+    testDb.prepare(
+        "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+    ).run("Incomplete task", 0);
+
+    // Request completed tasks
+    const response = await request(app)
+        .get("/tasks?completed=true");
+
+    // Verify that no matching tasks were found
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual([]);
+    });
+    
 });
+
+// POST
 
 describe("POST /tasks", () => {
     it("should create a task", async () => {
@@ -108,6 +184,8 @@ describe("POST /tasks", () => {
     });
 
 });
+
+// PATCH
 
 describe("PATCH /tasks/:id", () => {
     it("should update a task's completion status", async () => {
@@ -217,6 +295,8 @@ describe("PATCH /tasks/:id", () => {
     });
 
 });
+
+// DELETE
 
 describe("DELETE /tasks/:id", () => {
     it("should delete a task", async () => {

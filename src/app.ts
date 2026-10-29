@@ -16,12 +16,42 @@ export function createApp(database: Database.Database) {
     // Route for retrieving all tasks in the SQLite database
     app.get("/tasks", (req, res) => {
 
-        // Retrieving all tasks
-        const tasks = db.prepare("SELECT * FROM tasks").all() as {
+        // Read the optional completed query parameter
+        const completed = req.query.completed;
+
+        // Validate the optional completed query parameter
+        // Check if the parameter is undefined, or something other than true or false
+        if (
+            completed !== undefined &&
+            completed !== "true" &&
+            completed !== "false"
+        ) {
+            return res.status(400).json({
+                error: "Completed must be true or false"
+            });
+        }
+        
+        // Defining the SQLite task structure
+        type DatabaseTask = {
             id: number;
             title: string;
             completed: number;
-        }[];
+        };
+
+        let tasks: DatabaseTask[];
+
+        if (completed === undefined) {
+            // No filter provided: retrieve all tasks
+            tasks = db.prepare("SELECT * FROM tasks").all() as DatabaseTask[];
+        } else {
+            // Convert the query parameter to SQLite's integer representation
+            const completedValue = completed === "true" ? 1 : 0;
+
+            // Retrieve only tasks matching the requested completion status
+            tasks = db
+                .prepare("SELECT * FROM tasks WHERE completed = ?")
+                .all(completedValue) as DatabaseTask[];
+        }
 
         // Formatting the "completed" field to use Boolean instead of 0 and 1
         const formattedTasks = tasks.map((task) => ({

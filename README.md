@@ -28,7 +28,7 @@ The API provides the following endpoints for managing tasks:
 
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/tasks` | Retrieve all tasks |
+| GET | `/tasks` | Retrieve all tasks, optionally filtered by completion status |
 | GET | `/tasks/:id` | Retrieve a specific task |
 | POST | `/tasks` | Create a new task |
 | PATCH | `/tasks/:id` | Update an existing task |
