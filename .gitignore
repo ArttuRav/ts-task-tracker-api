@@ -22,3 +22,6 @@ coverage/
 src/*.d.ts
 src/*.d.ts.map
 src/*.js.map
+
+// Text files
+APIusagetemplates.txt
