@@ -1,0 +1,23 @@
+// Dependencies
+node_modules/
+
+// Compiled JavaScript
+dist/
+
+// Environmental variables
+.env
+.env.*
+
+// SQLite databases
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+// Test coverage
+coverage/
+
+// Generated TypeScript files inside JavaScript
+src/*.d.ts
+src/*.d.ts.map
+src/*.js.map
