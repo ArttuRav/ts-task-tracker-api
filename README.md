@@ -165,6 +165,44 @@ The parameter accepts only `true` or `false`. Any other value returns HTTP `400 
 
 If no tasks match the filter, the API returns HTTP `200 OK` with an empty array (`[]`).
 
+### Pagination
+
+The `GET /tasks` endpoint supports pagination using two optional query parameters:
+
+| Parameter | Description | Default |
+|---|---|---|
+| `page` | Page number (starting from 1) | `1` |
+| `limit` | Maximum number of tasks per page | `10` |
+
+**Examples:**
+
+Get the first five tasks:
+
+```http
+GET /tasks?page=1&limit=5
+```
+
+Get the next five tasks:
+
+```http
+GET /tasks?page=2&limit=5
+```
+
+Combine pagination with completion-status filtering:
+
+```http
+GET /tasks?completed=true&page=2&limit=5
+```
+
+**Behavior:**
+
+- Tasks are ordered by ID in ascending order.
+- Filtering is applied before pagination.
+- Requests without pagination parameters default to page 1 with a limit of 10.
+- Pages beyond the available tasks return an empty array (`[]`).
+- Invalid page or limit values return HTTP `400 Bad Request`.
+- The response remains a JSON array of tasks.
+
 ### Get a Specific Task
 
 ```powershell

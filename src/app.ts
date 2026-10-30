@@ -19,6 +19,40 @@ export function createApp(database: Database.Database) {
         // Read the optional completed query parameter
         const completed = req.query.completed;
 
+        // Read the optional pagination query parameters
+        const page = req.query.page === undefined
+            ? 1
+            : Number(req.query.page);
+        const limit = req.query.limit === undefined 
+            ? 10 
+            : Number(req.query.limit);
+
+        // Validating pagination parameters
+
+        // Checking if the page given is not an integer or less than 1
+        if (!Number.isSafeInteger(page) || page < 1) {
+            return res.status(400).json({
+                error: "Page must be a positive integer"
+            });
+        }
+
+        // Checking if the limit given is not an integer or less than 1
+        if (!Number.isSafeInteger(limit) || limit < 1) {
+            return res.status(400).json({
+                error: "Limit must be a positive integer"
+            });
+        }
+
+        // Calculate how many tasks to skip
+        const offset = (page - 1) * limit;
+
+        // Ensure the calculated offset is a safe number
+        if(!Number.isSafeInteger(offset)) {
+            return res.status(400).json({
+                error: "Pagination offset is too large"
+            });
+        }
+
         // Validate the optional completed query parameter
         // Check if the parameter is undefined, or something other than true or false
         if (
@@ -41,16 +75,20 @@ export function createApp(database: Database.Database) {
         let tasks: DatabaseTask[];
 
         if (completed === undefined) {
-            // No filter provided: retrieve all tasks
-            tasks = db.prepare("SELECT * FROM tasks").all() as DatabaseTask[];
+            // Retrieve a page of tasks without filtering
+            tasks = db
+                .prepare("SELECT * FROM tasks ORDER BY id LIMIT ? OFFSET ?")
+                .all(limit, offset) as DatabaseTask[];
         } else {
             // Convert the query parameter to SQLite's integer representation
             const completedValue = completed === "true" ? 1 : 0;
 
             // Retrieve only tasks matching the requested completion status
             tasks = db
-                .prepare("SELECT * FROM tasks WHERE completed = ?")
-                .all(completedValue) as DatabaseTask[];
+                .prepare("SELECT * FROM tasks WHERE completed = ? ORDER BY id LIMIT ? OFFSET ?"
+
+                )
+                .all(completedValue, limit, offset) as DatabaseTask[];
         }
 
         // Formatting the "completed" field to use Boolean instead of 0 and 1

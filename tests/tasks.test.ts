@@ -70,76 +70,192 @@ describe("GET /tasks", () => {
     });
 
     it("should return only completed tasks when completed=true", async () => {
-    // Insert two tasks with different completion statuses
-    testDb.prepare(
-        "INSERT INTO tasks (title, completed) VALUES (?, ?)"
-    ).run("Completed task", 1);
+        // Insert two tasks with different completion statuses
+        testDb.prepare(
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+        ).run("Completed task", 1);
 
-    testDb.prepare(
-        "INSERT INTO tasks (title, completed) VALUES (?, ?)"
-    ).run("Incomplete task", 0);
+        testDb.prepare(
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+        ).run("Incomplete task", 0);
 
-    // Request only completed tasks
-    const response = await request(app)
-        .get("/tasks?completed=true");
+        // Request only completed tasks
+        const response = await request(app)
+            .get("/tasks?completed=true");
 
-    // Verify the response
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveLength(1);
-    expect(response.body[0].title).toBe("Completed task");
-    expect(response.body[0].completed).toBe(true);
-    });
+        // Verify the response
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveLength(1);
+        expect(response.body[0].title).toBe("Completed task");
+        expect(response.body[0].completed).toBe(true);
+        });
 
-    it("should return only completed tasks when completed=false", async () => {
-    // Insert two tasks with different completion statuses
-    testDb.prepare(
-        "INSERT INTO tasks (title, completed) VALUES (?, ?)"
-    ).run("Completed task", 1);
+        it("should return only completed tasks when completed=false", async () => {
+        // Insert two tasks with different completion statuses
+        testDb.prepare(
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+        ).run("Completed task", 1);
 
-    testDb.prepare(
-        "INSERT INTO tasks (title, completed) VALUES (?, ?)"
-    ).run("Incomplete task", 0);
+        testDb.prepare(
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+        ).run("Incomplete task", 0);
 
-    // Request only incomplete tasks
-    const response = await request(app)
-        .get("/tasks?completed=false");
+        // Request only incomplete tasks
+        const response = await request(app)
+            .get("/tasks?completed=false");
 
-    // Verify the response
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveLength(1);
-    expect(response.body[0].title).toBe("Incomplete task");
-    expect(response.body[0].completed).toBe(false);
+        // Verify the response
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveLength(1);
+        expect(response.body[0].title).toBe("Incomplete task");
+        expect(response.body[0].completed).toBe(false);
     });
 
     it("should return 400 for an invalid completed filter", async () => {
-    // Send a request with an invalid query parameter
-    const response = await request(app)
-        .get("/tasks?completed=hello");
+        // Send a request with an invalid query parameter
+        const response = await request(app)
+            .get("/tasks?completed=hello");
 
-    // Verify the HTTP status code
-    expect(response.status).toBe(400);
+        // Verify the HTTP status code
+        expect(response.status).toBe(400);
 
-    // Verify the error message
-    expect(response.body).toEqual({
-        error: "Completed must be true or false"
-    });
+        // Verify the error message
+        expect(response.body).toEqual({
+            error: "Completed must be true or false"
+        });
     });
 
     it("should return an empty array when no tasks match the filter", async () => {
-    // Insert only an incomplete task
-    testDb.prepare(
-        "INSERT INTO tasks (title, completed) VALUES (?, ?)"
-    ).run("Incomplete task", 0);
+        // Insert only an incomplete task
+        testDb.prepare(
+            "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+        ).run("Incomplete task", 0);
 
-    // Request completed tasks
-    const response = await request(app)
-        .get("/tasks?completed=true");
+        // Request completed tasks
+        const response = await request(app)
+            .get("/tasks?completed=true");
 
-    // Verify that no matching tasks were found
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual([]);
+        // Verify that no matching tasks were found
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([]);
     });
-    
+
+    it("should return the first page of tasks", async () => {
+        // Insert six tasks into the test database
+        for (let i = 1; i <= 6; i++) {
+            testDb.prepare(
+                "INSERT INTO tasks (title) VALUES (?)"
+            ).run(`Task ${i}`);
+        }
+
+        // Request the first page with a limit of three
+        const response = await request(app)
+            .get("/tasks?page=1&limit=3");
+
+        // Verify the response
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveLength(3);
+
+        expect(response.body.map((task: { title: string }) => task.title))
+            .toEqual(["Task 1", "Task 2", "Task 3"]);
+    });
+
+    it("should return the second page of tasks", async () => {
+        // Insert six tasks into the test database
+        for (let i = 1; i <= 6; i++) {
+            testDb.prepare(
+                "INSERT INTO tasks (title) VALUES (?)"
+            ).run(`Task ${i}`);
+        }
+
+        // Request the second page with a limit of three
+        const response = await request(app)
+            .get("/tasks?page=2&limit=3");
+
+        // Verify the response
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveLength(3);
+
+        expect(response.body.map((task: { title: string }) => task.title))
+            .toEqual(["Task 4", "Task 5", "Task 6"]);
+    });
+
+    it("should return an empty array when the requested page has no tasks", async () => {
+        // Insert three tasks into the test database
+        for (let i = 1; i <= 3; i++) {
+            testDb.prepare(
+                "INSERT INTO tasks (title) VALUES (?)"
+            ).run(`Task ${i}`);
+        }
+
+        // Request a page beyond the available tasks
+        const response = await request(app)
+            .get("/tasks?page=10&limit=5");
+
+        // Verify the response
+        expect(response.status).toBe(200);
+        expect(response.body).toEqual([]);
+    });
+
+    it("should paginate filtered completed tasks", async () => {
+        // Create five tasks with alternating completion statuses
+        for (let i = 1; i <= 5; i++) {
+            testDb.prepare(
+                "INSERT INTO tasks (title, completed) VALUES (?, ?)"
+            ).run(`Task ${i}`, i % 2 === 1 ? 1 : 0);
+        }
+
+        // Request the second page of completed tasks
+        const response = await request(app)
+            .get("/tasks?completed=true&page=2&limit=1");
+
+        // Verify the response
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveLength(1);
+        expect(response.body[0].title).toBe("Task 3");
+        expect(response.body[0].completed).toBe(true);
+    });
+
+    it("should reject a page number less than 1", async () => {
+        const response = await request(app)
+            .get("/tasks?page=0&limit=5");
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({
+            error: "Page must be a positive integer"
+        });
+    });
+
+    it("should reject a limit less than 1", async () => {
+        const response = await request(app)
+            .get("/tasks?page=1&limit=0");
+
+        expect(response.status).toBe(400);
+        expect(response.body).toEqual({
+            error: "Limit must be a positive integer"
+        });
+    });
+
+    it("should use default pagination values", async () => {
+        // Insert 12 tasks into the test database
+        for (let i = 1; i <= 12; i++) {
+            testDb.prepare(
+                "INSERT INTO tasks (title) VALUES (?)"
+            ).run(`Task ${i}`);
+        }
+
+        // Request tasks without pagination parameters
+        const response = await request(app)
+            .get("/tasks");
+
+        // Verify the default limit of 10
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveLength(10);
+
+        // Verify that the first page is returned
+        expect(response.body[0].title).toBe("Task 1");
+        expect(response.body[9].title).toBe("Task 10");
+    });
 });
 
 // POST
